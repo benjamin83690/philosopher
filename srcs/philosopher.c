@@ -6,7 +6,7 @@
 /*   By: bfichot <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/23 13:51:44 by bfichot           #+#    #+#             */
-/*   Updated: 2022/01/04 18:49:49 by bfichot          ###   ########.fr       */
+/*   Updated: 2022/01/05 17:59:58 by bfichot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,57 +38,79 @@ int		ft_atoi(const char *str)
 	return (isneg * numb);
 }
 
-void *ft_routine(void* param)
+void	*ft_routine(void* param)
 {
-	t_thread *tab;
-	tab = (t_thread *) param;
-    pthread_mutex_lock(tab->mutex);
-	printf("id : [%d]\n", tab->id);
+	t_philo *philo;
+	philo = param;
+    
+	eat(philo);
+	return (0);
+}
+
+void	eat(t_philo *philo)
+{
+	if (philo->id == 1)
+    	pthread_mutex_lock(&philo->d->mutex[philo->nbr_philo - 1]);
+	else
+    	pthread_mutex_lock(&philo->d->mutex[philo->id - 1]);
+    pthread_mutex_lock(&philo->d->mutex[philo->id]);
     for (int i = 0; i < 10000; ++i)
         shared += 1;
-    pthread_mutex_unlock(tab->mutex);
-    return 0;
+
+	if (philo->id == 1)
+    	pthread_mutex_unlock(&philo->d->mutex[philo->nbr_philo - 1]);
+	else
+		pthread_mutex_unlock(&philo->d->mutex[philo->id - 1]);
+	pthread_mutex_unlock(&philo->d->mutex[philo->id]);
 }
 
-long ft_time(t_data *data)
+long	ft_time(t_philo *philo)
 {
-	gettimeofday(&data->start, NULL);
-	return (data->start.tv_sec * 1000 + data->start.tv_usec / 1000);
+	gettimeofday(&philo->start, NULL);
+	return (philo->start.tv_sec * 1000 + philo->start.tv_usec / 1000);
 }
 
-void init_thread(t_thread *tab, char **av)
+void	init_thread(t_data *data, char **av)
 {
-	int i;
+	int	i;
 	
 	i = -1;
-	tab = malloc(sizeof(t_thread));
-	tab->thread = malloc(sizeof(pthread_t) * ft_atoi(av[1]));
-	tab->mutex = malloc(sizeof(pthread_mutex_t) * ft_atoi(av[1]));
-	tab->d->time = ft_time(tab->d);
-	tab->d->nbr_philo = ft_atoi(av[1]);
-	tab->d->time_to_die = ft_atoi(av[2]);
-	tab->d->time_to_eat = ft_atoi(av[3]);
-	tab->d->time_to_sleep = ft_atoi(av[4]);
-	tab->d->nbr_must_eat = ft_atoi(av[5]);
-	pthread_mutex_init(tab->mutex, NULL);
+	data->thread = malloc(sizeof(pthread_t) * ft_atoi(av[1]));
 	while (++i < ft_atoi(av[1]))
 	{
-		tab[i].id = i + 1;
-		//printf("id : [%d]\n", tab[i].id);
-		pthread_create(&tab->thread[i], NULL, ft_routine, &tab[i]);
+		data->p[i].time = ft_time(data->p);
+		data->p[i].nbr_philo = ft_atoi(av[1]);
+		data->p[i].time_to_die = ft_atoi(av[2]);
+		data->p[i].time_to_eat = ft_atoi(av[3]);
+		data->p[i].time_to_sleep = ft_atoi(av[4]);
+		data->p[i].nbr_must_eat = ft_atoi(av[5]);
+		data->p[i].id = i;
+		data->p[i].d = data;
+		pthread_create(&data->thread[i], NULL, ft_routine, &data->p[i]);
 	}
 	i = 0;
 	while (++i < ft_atoi(av[1]))
-        pthread_join(tab->thread[i], NULL);
+       pthread_join(data->thread[i], NULL);
+}
+
+void	init_mutex(t_data *data, char **av)
+{
+	int	i;
+	
+	i = -1;
+	data->p = malloc(sizeof(t_philo) * ft_atoi(av[1]));
+	data->mutex = malloc(sizeof(pthread_mutex_t) * ft_atoi(av[1]));
+	while (++i < ft_atoi(av[1]))
+		pthread_mutex_init(&data->mutex[i], NULL);
 }
 
 int main(int ac, char **av)
 {
-    t_thread tab;
+    t_data data;
 	if (ac < 5 || ac > 6)
 		return (0);
-
-	init_thread(&tab, av);	
+	init_mutex(&data, av);
+	init_thread(&data, av);	
     printf("%d\n", shared);
     exit(EXIT_SUCCESS);
 }

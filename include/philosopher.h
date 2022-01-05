@@ -6,7 +6,7 @@
 /*   By: bfichot <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/23 13:49:42 by bfichot           #+#    #+#             */
-/*   Updated: 2022/01/04 18:50:10 by bfichot          ###   ########.fr       */
+/*   Updated: 2022/01/05 17:59:56 by bfichot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,10 @@
 # include <pthread.h>
 # include <sys/time.h>
 
-typedef struct s_thread t_thread;
-
-typedef struct s_data
+typedef struct s_data t_data;
+typedef struct s_philo
 {
+	int		id;
 	int		nbr_philo;
 	long	time_to_die;
 	long	time_to_eat;
@@ -29,20 +29,22 @@ typedef struct s_data
 	long	nbr_must_eat;
 	long	last_eat;
 	long	time;
-	struct timeval start, end;
-}	t_data;
+	struct	timeval start, end;
+	t_data	*d;
+}	t_philo;
 
-struct s_thread
+struct s_data
 {
-	int id;
 	pthread_t *thread;
+	t_philo *p;
 	pthread_mutex_t *mutex;
-	t_data *d;
 };
 
 void	*ft_routine(void *arg);
-void	init_thread(t_thread *tab, char **av);
-void	init_data(t_data *data);
+void	init_thread(t_data *data, char **av);
+void	init_mutex(t_data *data, char **av);
+void	eat(t_philo *philo);
+long	ft_time(t_philo *philo);
 int		ft_atoi(const char *str);
 
 #endif
