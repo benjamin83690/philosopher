@@ -6,7 +6,7 @@
 /*   By: bfichot <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/23 13:51:44 by bfichot           #+#    #+#             */
-/*   Updated: 2022/01/05 17:59:58 by bfichot          ###   ########.fr       */
+/*   Updated: 2022/01/08 18:05:55 by bfichot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,26 +42,53 @@ void	*ft_routine(void* param)
 {
 	t_philo *philo;
 	philo = param;
-    
-	eat(philo);
+   
+   	while (1)
+	{
+		if (eat(philo))
+			break;
+		ft_sleep(philo);
+		think(philo);
+	}
 	return (0);
 }
 
-void	eat(t_philo *philo)
+int	eat(t_philo *philo)
 {
-	if (philo->id == 1)
+	if (philo->eat == philo->nbr_must_eat)
+		return (1);
+	if (philo->id % 2 == 0)
+		usleep(philo->time_to_eat);
+	if (philo->id == 0)
     	pthread_mutex_lock(&philo->d->mutex[philo->nbr_philo - 1]);
 	else
     	pthread_mutex_lock(&philo->d->mutex[philo->id - 1]);
     pthread_mutex_lock(&philo->d->mutex[philo->id]);
-    for (int i = 0; i < 10000; ++i)
-        shared += 1;
-
-	if (philo->id == 1)
+	print_philo(philo);
+	philo->eat++;
+	usleep(philo->time_to_eat);
+	if (philo->id == 0)
     	pthread_mutex_unlock(&philo->d->mutex[philo->nbr_philo - 1]);
 	else
 		pthread_mutex_unlock(&philo->d->mutex[philo->id - 1]);
 	pthread_mutex_unlock(&philo->d->mutex[philo->id]);
+	print_drop(philo);
+	return (0);
+}
+
+void	ft_sleep(t_philo *philo)
+{
+    pthread_mutex_lock(&philo->d->talk[philo->id]);
+	printf("temps:[%ld], philo: [%d], is sleeping |----| \n",print_time(philo), philo->id);
+	usleep(philo->time_to_sleep);
+    pthread_mutex_unlock(&philo->d->talk[philo->id]);
+}
+
+void	think(t_philo *philo)
+{
+    pthread_mutex_lock(&philo->d->talk[philo->id]);
+	printf("temps:[%ld], philo: [%d], is thinking ??? \n",print_time(philo), philo->id);
+    pthread_mutex_unlock(&philo->d->talk[philo->id]);
 }
 
 long	ft_time(t_philo *philo)
@@ -70,7 +97,29 @@ long	ft_time(t_philo *philo)
 	return (philo->start.tv_sec * 1000 + philo->start.tv_usec / 1000);
 }
 
-void	init_thread(t_data *data, char **av)
+long	print_time(t_philo *philo)
+{
+	return (ft_time(philo) - philo->time);
+}
+
+void	print_philo(t_philo *philo)
+{
+	philo->d->talk = malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(philo->d->talk, NULL);
+    pthread_mutex_lock(&philo->d->talk[philo->id]);
+	printf("temps:[%ld], philo: [%d],has taken a fork |||\n",print_time(philo), philo->id);
+	printf("temps:[%ld], philo: [%d],has taken a fork |||\n",print_time(philo), philo->id);
+	printf("philo: [%d],is eating ( )\n",philo->id);
+    pthread_mutex_unlock(&philo->d->talk[philo->id]);
+}
+
+void	print_drop(t_philo *philo)
+{
+	printf("temps:[%ld], philo: [%d],has drop a fork |||\n",print_time(philo), philo->id);
+	printf("temps:[%ld], philo: [%d],has drop a fork |||\n",print_time(philo), philo->id);
+}
+
+void	init_thread(t_data *data, char **av, int ac)
 {
 	int	i;
 	
@@ -80,12 +129,15 @@ void	init_thread(t_data *data, char **av)
 	{
 		data->p[i].time = ft_time(data->p);
 		data->p[i].nbr_philo = ft_atoi(av[1]);
-		data->p[i].time_to_die = ft_atoi(av[2]);
-		data->p[i].time_to_eat = ft_atoi(av[3]);
-		data->p[i].time_to_sleep = ft_atoi(av[4]);
-		data->p[i].nbr_must_eat = ft_atoi(av[5]);
+		data->p[i].time_to_die = ft_atoi(av[2]) * 1000;
+		data->p[i].time_to_eat = ft_atoi(av[3]) * 1000;
+		data->p[i].time_to_sleep = ft_atoi(av[4]) * 1000;
+		if (ac > 5)
+			data->p[i].nbr_must_eat = ft_atoi(av[5]);
 		data->p[i].id = i;
 		data->p[i].d = data;
+		data->p[i].death = 0;
+		data->p[i].eat = 0;
 		pthread_create(&data->thread[i], NULL, ft_routine, &data->p[i]);
 	}
 	i = 0;
@@ -110,7 +162,6 @@ int main(int ac, char **av)
 	if (ac < 5 || ac > 6)
 		return (0);
 	init_mutex(&data, av);
-	init_thread(&data, av);	
-    printf("%d\n", shared);
+	init_thread(&data, av, ac);	
     exit(EXIT_SUCCESS);
 }
