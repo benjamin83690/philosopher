@@ -1,5 +1,5 @@
 CC		= gcc
-CFLAGS	= -Wall -Wextra -Werror
+CFLAGS	= -Wall -Wextra -Werror -g
 HEADER	= include
 SRCS	= srcs/philosopher.c
 RM		= rm -f
