@@ -38,16 +38,14 @@ typedef struct s_philo
 struct s_data
 {
 	pthread_t		*thread;
-	pthread_t		td;
 	t_philo			*p;
 	pthread_mutex_t	*mutex;
 	pthread_mutex_t	talk;
-	pthread_mutex_t	md;
 };
 
 void	*ft_routine(void *arg);
 void	*check_death(void *param);
-void	ft_usleep(t_philo *philo,int ms);
+void	ft_usleep(int ms);
 void	init_thread(t_data *data, char **av, int ac);
 void	init_mutex(t_data *data, char **av);
 void	print_philo(t_philo *philo);
@@ -55,7 +53,7 @@ void	ft_sleep(t_philo *philo);
 void	think(t_philo *philo);
 void	print_drop(t_philo *philo);
 long	print_time(t_philo *philo);
-long	ft_time(t_philo *philo);
+long	ft_time(void);
 int		ft_atoi(const char *str);
 int		eat(t_philo *philo);
 int		is_death(t_philo *philo, int i);
