@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philosopher.c                                      :+:      :+:    :+:   */
+/*   philosopher_bonus.c                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: bfichot <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/12/23 13:51:44 by bfichot           #+#    #+#             */
-/*   Updated: 2022/01/17 16:11:53 by bfichot          ###   ########.fr       */
+/*   Created: 2022/01/13 16:48:05 by bfichot           #+#    #+#             */
+/*   Updated: 2022/01/17 13:47:00 by bfichot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,6 @@ void	*ft_routine(void *param)
 		else
 			break ;
 	}
-	free(philo->d->mutex);
-	free(philo->d->thread);
 	return (0);
 }
 
@@ -56,42 +54,58 @@ void	init_thread(t_data *data, char **av, int ac)
 		data->p[i].death = 0;
 		data->p[i].last_eat = 0;
 		data->p[i].eat = 0;
-		if (one_philo(&data->p[i]))
-			return ;
-		pthread_create(&data->thread[i], NULL, ft_routine, &data->p[i]);
-		pthread_detach(data->thread[i]);
+		data->p[i].pid = 0;
+		if (one_philo(data->p))
+			exit(EXIT_FAILURE);
 	}
 }
 
-void	init_mutex(t_data *data, char **av)
+void	init_sema(t_data *data, char **av, int i)
 {
-	int	i;
-
-	i = -1;
-	data->p = malloc(sizeof(t_philo) * ft_atoi(av[1]));
-	pthread_mutex_init(&data->talk, NULL);
-	data->mutex = malloc(sizeof(pthread_mutex_t) * ft_atoi(av[1]));
+	data->sem = sem_open("sem_routine", O_CREAT | O_EXCL, 0660, ft_atoi(av[1]));
+	data->dead = sem_open("dead", O_CREAT | O_EXCL, 0660, 1);
+	if (data->sem == SEM_FAILED && data->dead == SEM_FAILED)
+	{
+		sem_unlink("sem_routine");
+		sem_unlink("dead");
+		data->dead = sem_open("dead", O_CREAT | O_EXCL, 0660, 1);
+		data->sem = sem_open("sem_routine",
+				O_CREAT | O_EXCL, 0660, ft_atoi(av[1]));
+	}
 	while (++i < ft_atoi(av[1]))
-		pthread_mutex_init(&data->mutex[i], NULL);
+	{
+		data->p[i].pid = fork();
+		if (data->p[i].pid == 0)
+		{
+			pthread_create(data->thread, NULL, check_death, &data->p[i]);
+			ft_routine(&data->p[i]);
+			exit(EXIT_SUCCESS);
+		}
+	}
+	waitpid(0, NULL, 0);
+	i = -1;
+	while (++i < ft_atoi(av[1]))
+		kill(data->p[i].pid, SIGINT);
 }
 
 int	main(int ac, char **av)
 {
 	t_data	data;
+	int		i;
 
+	i = -1;
 	if (!check_error(ac, av))
 	{
 		printf("Arguments invalide!\n");
 		return (0);
 	}
-	data.thread = malloc(sizeof(pthread_t) * ft_atoi(av[1]));
-	init_mutex(&data, av);
+	data.thread = malloc(sizeof(pthread_t));
+	data.p = malloc(sizeof(t_philo) * ft_atoi(av[1]));
+	pthread_mutex_init(&data.talk, NULL);
 	init_thread(&data, av, ac);
-	check_death(data.p);
-	pthread_mutex_destroy(data.mutex);
-	pthread_mutex_destroy(&data.talk);
-	free(data.thread);
-	free(data.mutex);
+	init_sema(&data, av, i);
+	sem_post(data.dead);
+	sem_close(data.dead);
+	sem_close(data.sem);
 	free(data.p);
-	return (0);
 }
